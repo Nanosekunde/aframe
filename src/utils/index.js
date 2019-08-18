@@ -15,8 +15,10 @@ module.exports.debug = debug;
 module.exports.device = device;
 module.exports.entity = require('./entity');
 module.exports.forceCanvasResizeSafariMobile = require('./forceCanvasResizeSafariMobile');
+module.exports.isIE11 = require('./is-ie11');
 module.exports.material = require('./material');
 module.exports.objectPool = objectPool;
+module.exports.split = require('./split').split;
 module.exports.styleParser = require('./styleParser');
 module.exports.trackedControls = require('./tracked-controls');
 
@@ -24,13 +26,15 @@ module.exports.checkHeadsetConnected = function () {
   warn('`utils.checkHeadsetConnected` has moved to `utils.device.checkHeadsetConnected`');
   return device.checkHeadsetConnected(arguments);
 };
-module.exports.isGearVR = function () {
-  warn('`utils.isGearVR` has moved to `utils.device.isGearVR`');
-  return device.isGearVR(arguments);
+module.exports.isGearVR = module.exports.device.isGearVR = function () {
+  warn('`utils.isGearVR` has been deprecated, use `utils.device.isMobileVR`');
 };
 module.exports.isIOS = function () {
   warn('`utils.isIOS` has moved to `utils.device.isIOS`');
   return device.isIOS(arguments);
+};
+module.exports.isOculusGo = module.exports.device.isOculusGo = function () {
+  warn('`utils.isOculusGo` has been deprecated, use `utils.device.isMobileVR`');
 };
 module.exports.isMobile = function () {
   warn('`utils.isMobile has moved to `utils.device.isMobile`');
@@ -322,19 +326,3 @@ module.exports.findAllScenes = function (el) {
 
 // Must be at bottom to avoid circular dependency.
 module.exports.srcLoader = require('./src-loader');
-
-/**
- * String split with cached result.
- */
-module.exports.split = (function () {
-  var splitCache = {};
-
-  return function (str, delimiter) {
-    if (!(delimiter in splitCache)) { splitCache[delimiter] = {}; }
-
-    if (str in splitCache[delimiter]) { return splitCache[delimiter][str]; }
-
-    splitCache[delimiter][str] = str.split(delimiter);
-    return splitCache[delimiter][str];
-  };
-})();

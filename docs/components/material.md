@@ -72,6 +72,7 @@ depending on the material type applied.
 | transparent  | Whether material is transparent. Transparent entities are rendered after non-transparent entities.                                                | false         |
 | vertexColors | Whether to use vertex or face colors to shade the material. Can be one of `none`, `vertex`, or `face`.                                            | none          |
 | visible      | Whether material is visible. Raycasters will ignore invisible materials.                                                                          | true          |
+| blending     | The blending mode for the material's RGB and Alpha sent to the WebGLRenderer. Can be one of `none`, `normal`, `additive`, `subtractive` or `multiply`.  | normal          |
 
 ## Events
 
@@ -113,7 +114,7 @@ These properties are available on top of the base material properties.
 | height                        | Height of video (in pixels), if defining a video texture.                                                                                       | 360           |
 | envMap                        | Environment cubemap texture for reflections. Can be a selector to <a-cubemap> or a comma-separated list of URLs.                                | None          |
 | fog                           | Whether or not material is affected by [fog][fog].                                                                                              | true          |
-| metalness                     | How metallic the material is from `0` to `1`.                                                                                                   | 0.5           |
+| metalness                     | How metallic the material is from `0` to `1`.                                                                                                   | 0             |
 | normalMap                     | Normal map. Used to add the illusion of complex detail. Can either be a selector to an `<img>`, or an inline URL.                               | None          |
 | normalScale                   | Scale of the effect of the normal map in the X and Y directions.                                                                                | 1 1           |
 | normalTextureRepeat           | How many times the normal texture repeats in the X and Y direction.                                                                             | 1 1           |
@@ -247,7 +248,7 @@ Most of the other properties works together with textures. For example, the
 `color` property will act as the base color and multiplies per pixel with the
 texture. Set it to `#fff` to maintain the original colors of the texture.
 
-A-Frame caches textures are to not push redundant textures to the GPU.
+A-Frame caches textures so as to not push redundant textures to the GPU.
 
 ### Video Textures
 
@@ -314,7 +315,7 @@ refresh itself as the canvas changes.
 
 ### Repeating Textures
 
-We might want to tile textures rather than having them stretch. The `repeat`
+We might want to repeat tile textures rather than having them stretch. The `repeat`
 property can repeat textures.
 
 ```html
@@ -337,6 +338,19 @@ visual defects.
 
 To work around this issue, try changing the order of the entities in the HTML.
 
+When using PNG images as cutouts or masks (where part of the image should be
+fully transparent, and the rest fully opaque), try setting `transparent: false`
+and like `alphaTest: 0.5` to solve transparency issues. Play around with the alpha
+test value.
+
+### `render-order` Component
+
+[render-order component]: https://github.com/supermedium/superframe/tree/master/components/render-order#aframe-render-order-component
+
+Use the [render-order component] to tell the render to sort transparent objects
+by depth and to be able to manually define render order of entities in HTML via
+named layers. If you have transparency ordering issues, use this component.
+
 ## Register a Custom Shader Material
 
 We can register custom shader materials for appearances and effects using
@@ -348,7 +362,7 @@ Let's walk through an [example CodePen][example] with step-by-step commentary.
 As always, we need to include the A-Frame script.
 
 ```js
-<script src="https://aframe.io/releases/0.7.0/aframe.min.js"></script>
+<script src="https://aframe.io/releases/0.9.2/aframe.min.js"></script>
 ```
 
 Next, we define any components and shaders we need after the A-Frame
@@ -380,8 +394,8 @@ AFRAME.registerShader('my-custom', {
 </script>
 ```
 
-[rawshader]: https://threejs.org/docs/api/materials/RawShaderMaterial.html
-[shadermaterial]: https://threejs.org/docs/api/materials/ShaderMaterial.html
+[rawshader]: https://threejs.org/docs/#api/en/materials/RawShaderMaterial
+[shadermaterial]: https://threejs.org/docs/#api/en/materials/ShaderMaterial
 
 Setting `raw` to `true` uses [THREE.RawShaderMaterial][rawshader] instead of
 [ShaderMaterial][shadermaterial] so built-in uniforms and attributes are not
@@ -427,7 +441,7 @@ shader as a multi-line string:
 
 And using our shader from the `material` component:
 
-```
+```html
 <!-- A box using our shader, not fully opaque and blue. -->
 <a-box material="shader: my-custom; color: blue; opacity: 0.7; transparent: true" position="0 0 -2"></a-box>
 ```
@@ -617,16 +631,14 @@ AFRAME.registerComponent('myoffset-updater', {
 
 We then apply the component to the entity with the custom shader:
 
-```
+```html
 <a-scene>
-  <a-sphere material="shader:displacement-offset"
-            myoffset-updater
-            scale="1 1 1"
-            radius="0.2"
-            position="0 1.5 -2"
-            segments-height="128"
-            segments-width="128">
-    <a-animation attribute="scale" direction="alternate-reverse" dur="5000" from="1 1 1" to="4 4 4" repeat="indefinite"></a-animation>
+  <a-sphere
+    animation="property: scale; dir: alternate; dur: 5000; loop: true; to: 4 4 4"
+    geometry="radius: 0.2"
+    material="shader: displacement-offset"
+    myoffset-updater
+    position="0 1.5 -2">
   </a-sphere>
   <a-box color="#CCC" width="3" depth="3" height="0.1" position="0 0 -2"></a-box>
 </a-scene>

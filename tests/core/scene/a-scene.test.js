@@ -1,8 +1,7 @@
-/* global AFRAME, assert, CustomEvent, process, sinon, setup, suite, teardown, test */
+/* global AFRAME, assert, CustomEvent, process, sinon, setup, suite, teardown, test, THREE */
 var AScene = require('core/scene/a-scene').AScene;
 var components = require('core/component').components;
 var scenes = require('core/scene/scenes');
-var shouldAntiAlias = require('core/scene/a-scene').shouldAntiAlias;
 var setupCanvas = require('core/scene/a-scene').setupCanvas;
 var systems = require('core/system').systems;
 
@@ -37,34 +36,44 @@ suite('a-scene (without renderer)', function () {
   });
 
   suite('createdCallback', function () {
+    var sceneEl;
+    setup(function () {
+      sceneEl = document.createElement('a-scene');
+    });
+
     test('initializes scene object', function () {
-      assert.equal(this.el.object3D.type, 'Scene');
+      assert.equal(sceneEl.object3D.type, 'Scene');
     });
 
     test('does not initialize systems', function () {
-      var sceneEl = document.createElement('a-scene');
       assert.notOk(Object.keys(sceneEl.systems).length);
+    });
+
+    test('does not initialize renderer', function () {
+      sceneEl = document.createElement('a-scene');
+      // Mock renderer.
+      assert.ok(sceneEl.renderer);
+      // Mock renderer is not a real WebGLRenderer.
+      assert.notOk(sceneEl.renderer instanceof THREE.WebGLRenderer);
     });
   });
 
   suite('attachedCallback', function () {
-    test('initializes systems', function (done) {
-      var self = this;
-      self.el.addEventListener('loaded', function () {
-        assert.ok(Object.keys(self.el.systems).length);
+    test('initializes scene', function (done) {
+      var sceneEl = this.el;
+      sceneEl.addEventListener('loaded', function () {
+        assert.ok(Object.keys(sceneEl.systems).length);
+        assert.ok(this.behaviors.tick);
+        assert.ok(this.behaviors.tock);
+        assert.equal(sceneEl.hasLoaded, true, 'Has loaded');
+        assert.equal(sceneEl.renderTarget, null);
+        // Default components.
+        assert.ok(sceneEl.hasAttribute('inspector'));
+        assert.ok(sceneEl.hasAttribute('keyboard-shortcuts'));
+        assert.ok(sceneEl.hasAttribute('screenshot'));
+        assert.ok(sceneEl.hasAttribute('vr-mode-ui'));
         done();
       });
-    });
-  });
-
-  suite('init', function () {
-    test('initializes scene object', function () {
-      var sceneEl = this.el;
-      sceneEl.isPlaying = false;
-      sceneEl.hasLoaded = true;
-      sceneEl.init();
-      assert.equal(sceneEl.isPlaying, false);
-      assert.equal(sceneEl.hasLoaded, false);
     });
   });
 
@@ -74,10 +83,12 @@ suite('a-scene (without renderer)', function () {
       var sceneEl = this.el;
       var exitVRStub = this.sinon.stub(sceneEl, 'exitVR');
       event = new CustomEvent('vrdisplaydisconnect');
-      window.dispatchEvent(event);
-      process.nextTick(function () {
-        assert.ok(exitVRStub.calledWith(true));
-        done();
+      sceneEl.addEventListener('loaded', () => {
+        window.dispatchEvent(event);
+        setTimeout(function () {
+          assert.ok(exitVRStub.calledWith(true));
+          done();
+        });
       });
     });
   });
@@ -92,9 +103,11 @@ suite('a-scene (without renderer)', function () {
         done();
       });
 
-      event = new CustomEvent('vrdisplaypresentchange');
-      event.display = {isPresenting: true};
-      window.dispatchEvent(event);
+      sceneEl.addEventListener('loaded', () => {
+        event = new CustomEvent('vrdisplaypresentchange');
+        event.display = {isPresenting: true};
+        window.dispatchEvent(event);
+      });
     });
 
     test('tells A-Frame about exiting VR if no longer presenting', function (done) {
@@ -107,9 +120,11 @@ suite('a-scene (without renderer)', function () {
         done();
       });
 
-      event = new CustomEvent('vrdisplaypresentchange');
-      event.display = {isPresenting: false};
-      window.dispatchEvent(event);
+      sceneEl.addEventListener('loaded', () => {
+        event = new CustomEvent('vrdisplaypresentchange');
+        event.display = {isPresenting: false};
+        window.dispatchEvent(event);
+      });
     });
   });
 
@@ -126,7 +141,9 @@ suite('a-scene (without renderer)', function () {
           getDevice: function () {},
           setDevice: function () {},
           setPoseTarget: function () {}
-        }
+        },
+        getContext: function () { return undefined; },
+        setAnimationLoop: function () {}
       };
 
       // mock camera
@@ -170,15 +187,6 @@ suite('a-scene (without renderer)', function () {
       });
     });
 
-    test('does not call requestPresent if flag passed', function (done) {
-      var sceneEl = this.el;
-      this.sinon.stub(sceneEl, 'checkHeadsetConnected').returns(true);
-      sceneEl.enterVR(true).then(function () {
-        assert.notOk(sceneEl.renderer.vr.enabled);
-        done();
-      });
-    });
-
     test('adds VR mode state', function (done) {
       var sceneEl = this.el;
       sceneEl.enterVR().then(function () {
@@ -190,7 +198,7 @@ suite('a-scene (without renderer)', function () {
     test('adds fullscreen styles', function (done) {
       var sceneEl = this.el;
       sceneEl.enterVR().then(function () {
-        assert.ok(sceneEl.classList.contains('fullscreen'));
+        assert.ok(document.documentElement.classList.contains('a-fullscreen'));
         done();
       });
     });
@@ -199,12 +207,12 @@ suite('a-scene (without renderer)', function () {
       var sceneEl = this.el;
       var fullscreenSpy;
 
-      if (sceneEl.canvas.mozRequestFullScreen) {
+      if (sceneEl.canvas.requestFullscreen) {
+        fullscreenSpy = this.sinon.spy(sceneEl.canvas, 'requestFullscreen');
+      } else if (sceneEl.canvas.mozRequestFullScreen) {
         fullscreenSpy = this.sinon.spy(sceneEl.canvas, 'mozRequestFullScreen');
       } else if (sceneEl.canvas.webkitRequestFullScreen) {
         fullscreenSpy = this.sinon.spy(sceneEl.canvas, 'webkitRequestFullscreen');
-      } else {
-        fullscreenSpy = this.sinon.spy(sceneEl.canvas, 'requestFullscreen');
       }
 
       this.sinon.stub(sceneEl, 'checkHeadsetConnected').returns(false);
@@ -229,11 +237,14 @@ suite('a-scene (without renderer)', function () {
       sceneEl.canvas = document.createElement('canvas');
 
       // Stub renderer.
-      sceneEl.renderer = {vr: {
-        getDevice: function () {},
-        setDevice: function () {},
-        setPoseTarget: function () {}
-      }};
+      sceneEl.renderer = {
+        vr: {
+          getDevice: function () {},
+          setDevice: function () {},
+          setPoseTarget: function () {}
+        },
+        setPixelRatio: function () {}
+      };
 
       sceneEl.addState('vr-mode');
     });
@@ -276,16 +287,6 @@ suite('a-scene (without renderer)', function () {
       });
     });
 
-    test('does not call exitPresent if flag passed', function (done) {
-      var sceneEl = this.el;
-      sceneEl.renderer.vr.enabled = true;
-      this.sinon.stub(sceneEl, 'checkHeadsetConnected').returns(true);
-      sceneEl.exitVR(true).then(function () {
-        assert.ok(sceneEl.renderer.vr.enabled);
-        done();
-      });
-    });
-
     test('removes VR mode state', function (done) {
       var sceneEl = this.el;
       sceneEl.exitVR().then(function () {
@@ -297,18 +298,18 @@ suite('a-scene (without renderer)', function () {
     test('removes fullscreen styles if embedded', function (done) {
       var sceneEl = this.el;
       sceneEl.setAttribute('embedded', 'true');
-      sceneEl.classList.add('fullscreen');
+      document.documentElement.classList.add('a-fullscreen');
       sceneEl.exitVR().then(function () {
-        assert.notOk(sceneEl.classList.contains('fullscreen'));
+        assert.notOk(document.documentElement.classList.contains('a-fullscreen'));
         done();
       });
     });
 
     test('does not remove fullscreen styles if not embedded', function (done) {
       var sceneEl = this.el;
-      sceneEl.classList.add('fullscreen');
+      document.documentElement.classList.add('a-fullscreen');
       sceneEl.exitVR().then(function () {
-        assert.ok(sceneEl.classList.contains('fullscreen'));
+        assert.ok(document.documentElement.classList.contains('a-fullscreen'));
         done();
       });
     });
@@ -445,11 +446,13 @@ suite('a-scene (without renderer)', function () {
 
       requestPointerLockSpy = this.sinon.spy(sceneEl.canvas, 'requestPointerLock');
       event = new CustomEvent('vrdisplaypointerrestricted');
-      window.dispatchEvent(event);
 
-      process.nextTick(function () {
-        assert.ok(requestPointerLockSpy.called);
-        done();
+      sceneEl.addEventListener('loaded', () => {
+        window.dispatchEvent(event);
+        process.nextTick(function () {
+          assert.ok(requestPointerLockSpy.called);
+          done();
+        });
       });
     });
 
@@ -465,11 +468,13 @@ suite('a-scene (without renderer)', function () {
       this.sinon.stub(sceneEl, 'getPointerLockElement', function () {
         return sceneEl.canvas;
       });
-      window.dispatchEvent(event);
 
-      process.nextTick(function () {
-        assert.ok(exitPointerLockSpy.called);
-        done();
+      sceneEl.addEventListener('loaded', () => {
+        window.dispatchEvent(event);
+        process.nextTick(function () {
+          assert.ok(exitPointerLockSpy.called);
+          done();
+        });
       });
     });
 
@@ -487,11 +492,12 @@ suite('a-scene (without renderer)', function () {
         // independently of the a-scene handler for vrdisplaypointerrestricted event
         return document.createElement('canvas');
       });
-      window.dispatchEvent(event);
-
-      process.nextTick(function () {
-        assert.notOk(exitPointerLockSpy.called);
-        done();
+      sceneEl.addEventListener('loaded', () => {
+        window.dispatchEvent(event);
+        process.nextTick(function () {
+          assert.notOk(exitPointerLockSpy.called);
+          done();
+        });
       });
     });
 
@@ -510,12 +516,14 @@ suite('a-scene (without renderer)', function () {
         // independently of the a-scene handler for vrdisplaypointerrestricted event
         return document.createElement('canvas');
       });
-      window.dispatchEvent(event);
 
-      process.nextTick(function () {
-        assert.ok(exitPointerLockSpy.called);
-        assert.ok(requestPointerLockSpy.called);
-        done();
+      sceneEl.addEventListener('loaded', () => {
+        window.dispatchEvent(event);
+        process.nextTick(function () {
+          assert.ok(exitPointerLockSpy.called);
+          assert.ok(requestPointerLockSpy.called);
+          done();
+        });
       });
     });
   });
@@ -595,12 +603,6 @@ helpers.getSkipCISuite()('a-scene (with renderer)', function () {
     document.body.appendChild(el);
     el.addEventListener('renderstart', function () {
       done();
-    });
-  });
-
-  suite('attachedCallback', function () {
-    test('sets up renderer', function () {
-      assert.ok(this.el.renderer);
     });
   });
 
@@ -733,32 +735,5 @@ suite('setupCanvas', function () {
     assert.notOk(el.canvas);
     setupCanvas(el);
     assert.ok(el.canvas);
-  });
-});
-
-suite('shouldAntiAlias', function () {
-  var sceneEl;
-
-  setup(function () {
-    sceneEl = document.createElement('a-scene');
-  });
-
-  test('is true if set to true', function () {
-    sceneEl.setAttribute('antialias', 'true');
-    assert.ok(shouldAntiAlias(sceneEl));
-  });
-
-  test('is false if set to false', function () {
-    sceneEl.setAttribute('antialias', 'false');
-    assert.notOk(shouldAntiAlias(sceneEl));
-  });
-
-  test('is true on desktop by default', function () {
-    assert.ok(shouldAntiAlias(sceneEl));
-  });
-
-  test('is false on mobile with no native webvr by default', function () {
-    sceneEl.isMobile = true;
-    assert.notOk(shouldAntiAlias(sceneEl));
   });
 });

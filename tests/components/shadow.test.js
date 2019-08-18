@@ -6,19 +6,26 @@ suite('shadow component', function () {
   var component;
   var el;
   var mesh;
+  var meshWithMaterialArray;
 
   setup(function (done) {
     el = entityFactory();
-    el.addEventListener('componentinitialized', function (evt) {
-      if (evt.detail.name !== 'shadow') { return; }
-      component = el.components.shadow;
-      done();
+    setTimeout(() => {
+      el.sceneEl.addEventListener('loaded', function (evt) {
+        component = el.components.shadow;
+        done();
+      });
+      el.setAttribute('shadow', {});
+      mesh = new THREE.Mesh(
+        new THREE.Sphere(2),
+        new THREE.MeshBasicMaterial({color: 0xffff00})
+      );
+      meshWithMaterialArray = new THREE.Mesh(
+        new THREE.Sphere(2),
+        [new THREE.MeshBasicMaterial({color: 0xffff00}),
+          new THREE.MeshBasicMaterial({color: 0xffff00})]
+      );
     });
-    el.setAttribute('shadow', {});
-    mesh = new THREE.Mesh(
-      new THREE.Sphere(2),
-      new THREE.MeshBasicMaterial({color: 0xffff00})
-    );
   });
 
   suite('update', function () {
@@ -35,10 +42,20 @@ suite('shadow component', function () {
       assert.notOk(mesh.receiveShadow);
     });
 
-    test('sets needsUpdate on materials', function () {
+    test('sets needsUpdate on material', function () {
       el.object3D.add(mesh);
+      mesh.material.needsUpdate = false;
       component.update();
       assert.ok(mesh.material.needsUpdate);
+    });
+
+    test('sets needsUpdate on material array', function () {
+      el.object3D.add(meshWithMaterialArray);
+      meshWithMaterialArray.material[0].needsUpdate = false;
+      meshWithMaterialArray.material[1].needsUpdate = false;
+      component.update();
+      assert.ok(meshWithMaterialArray.material[0].needsUpdate &&
+        meshWithMaterialArray.material[1].needsUpdate);
     });
 
     test('refreshes after setObject3D', function () {

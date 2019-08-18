@@ -57,13 +57,18 @@ before kicking off the render loop.
 | systems       | Instantiated [systems][systems].                                          |
 | time          | Global uptime of scene in seconds.                                        |
 
+## States
+
+| Name    | Description                                                                                                            |
+|---------|------------------------------------------------------------------------------------------------------------------------|
+| vr-mode | Added and removed when entering and exiting VR, respectively. Check with `sceneEl.is('vr-mode')`. |
+
 ## Methods
 
 | Name    | Description                                                                                                            |
 |---------|------------------------------------------------------------------------------------------------------------------------|
 | enterVR | Switch to stereo render and push content to the headset. Needs to be called within a user-generated event handler like `click`. the first time a page enters VR. |
 | exitVR  | Switch to mono renderer and stops presenting content on the headset.                                                                           |
-| reload  | Revert the scene to its original state.                                                                                |
 
 ## Events
 

@@ -7,10 +7,10 @@ suite('position controls on camera with WASD controls (integration unit test)', 
     var el = helpers.entityFactory();
     var self = this;
 
-    el.addEventListener('loaded', function () {
-      el.sceneEl.addEventListener('camera-set-active', function () {
+    setTimeout(() => {
+      el.sceneEl.addEventListener('loaded', function () {
         self.el = el.sceneEl.querySelector('[camera]');  // Default camera.
-        process.nextTick(function () { done(); });
+        done();
       });
     });
   });
@@ -134,7 +134,7 @@ suite('rotation controls on camera in VR mode', function () {
     var self = this;
     this.position = [0, 0, 0];
     this.orientation = [0, 0, 0];
-    sceneEl.addEventListener('camera-ready', function () {
+    sceneEl.addEventListener('cameraready', function () {
       sceneEl.renderer.vr.getCamera = function (obj) {
         if (!this.enabled) { return; }
         obj.position.fromArray(self.position);
@@ -216,10 +216,10 @@ suite('rotation controls on camera with mouse drag (integration unit test)', fun
   setup(function (done) {
     var el = this.el = helpers.entityFactory();
     var self = this;
-    el.addEventListener('loaded', function () {
-      el.sceneEl.addEventListener('camera-ready', function () {
-        var cameraEl = self.cameraEl = el.sceneEl.querySelector('[camera]');  // Default camera.
-        cameraEl.addEventListener('loaded', function () { done(); });
+    setTimeout(() => {
+      el.sceneEl.addEventListener('loaded', function () {
+        self.cameraEl = el.sceneEl.camera.el;
+        done();
       });
     });
   });
@@ -228,14 +228,14 @@ suite('rotation controls on camera with mouse drag (integration unit test)', fun
     var el = this.el;
     var self = this;
     var mousedownEvent = new Event('mousedown');
+    mousedownEvent.screenX = 1000;
+    mousedownEvent.screenY = 1000;
     mousedownEvent.button = 0;
     el.sceneEl.canvas.dispatchEvent(mousedownEvent);
     process.nextTick(function afterMousedown () {
       var mouseMoveEvent = new Event('mousemove');
-      mouseMoveEvent.movementX = 1000;
-      mouseMoveEvent.movementY = 0.1;
-      mouseMoveEvent.screenX = 1000;
-      mouseMoveEvent.screenY = 1000;
+      mouseMoveEvent.screenX = 1500;
+      mouseMoveEvent.screenY = 1000.1;
       window.dispatchEvent(mouseMoveEvent);
       process.nextTick(function afterMousemove () {
         var cameraEl = self.cameraEl;
@@ -253,17 +253,75 @@ suite('rotation controls on camera with mouse drag (integration unit test)', fun
     var el = this.el;
     var self = this;
     var mousedownEvent = new Event('mousedown');
+    mousedownEvent.screenX = 1000;
+    mousedownEvent.screenY = 1000;
     mousedownEvent.button = 0;
     el.sceneEl.canvas.dispatchEvent(mousedownEvent);
     process.nextTick(function afterMousedown () {
       var mouseMoveEvent = new Event('mousemove');
-      mouseMoveEvent.movementX = 0.1;
-      mouseMoveEvent.movementY = 1000;
-      mouseMoveEvent.screenX = 1000;
-      mouseMoveEvent.screenY = 1000;
+      mouseMoveEvent.screenX = 1000.1;
+      mouseMoveEvent.screenY = 1500;
       window.dispatchEvent(mouseMoveEvent);
       process.nextTick(function afterMousemove () {
         var cameraEl = self.cameraEl;
+        var rotation;
+        cameraEl.components['look-controls'].updateOrientation();
+        rotation = cameraEl.getAttribute('rotation');
+        assert.equal(Math.floor(Math.abs(rotation.y)), 0);
+        assert.notEqual(Math.floor(Math.abs(rotation.x)), 0);
+        done();
+      });
+    });
+  });
+
+  test('rotates camera on moving pointerlocked mouse along X', function (done) {
+    var el = this.el;
+    var self = this;
+    var cameraEl = self.cameraEl;
+    var mousedownEvent = new Event('mousedown');
+    mousedownEvent.screenX = 1000;
+    mousedownEvent.screenY = 1000;
+    mousedownEvent.button = 0;
+    el.sceneEl.canvas.dispatchEvent(mousedownEvent);
+    process.nextTick(function afterMousedown () {
+      cameraEl.components['look-controls'].pointerLocked = true;
+      var mouseMoveEvent = new Event('mousemove');
+      mouseMoveEvent.movementX = 1000;
+      mouseMoveEvent.movementY = 0.1;
+      // screen coordinates should be ignored with pointer lock
+      mouseMoveEvent.screenX = 9000;
+      mouseMoveEvent.screenY = 9000;
+      window.dispatchEvent(mouseMoveEvent);
+      process.nextTick(function afterMousemove () {
+        var rotation;
+        cameraEl.components['look-controls'].updateOrientation();
+        rotation = cameraEl.getAttribute('rotation');
+        assert.equal(Math.floor(Math.abs(rotation.x)), 0);
+        assert.notEqual(Math.floor(Math.abs(rotation.y)), 0);
+        done();
+      });
+    });
+  });
+
+  test('rotates camera on moving pointerlocked mouse along Y', function (done) {
+    var el = this.el;
+    var self = this;
+    var cameraEl = self.cameraEl;
+    var mousedownEvent = new Event('mousedown');
+    mousedownEvent.screenX = 1000;
+    mousedownEvent.screenY = 1000;
+    mousedownEvent.button = 0;
+    el.sceneEl.canvas.dispatchEvent(mousedownEvent);
+    process.nextTick(function afterMousedown () {
+      cameraEl.components['look-controls'].pointerLocked = true;
+      var mouseMoveEvent = new Event('mousemove');
+      mouseMoveEvent.movementX = 0.1;
+      mouseMoveEvent.movementY = 1000;
+      // screen coordinates should be ignored with pointer lock
+      mouseMoveEvent.screenX = 9000;
+      mouseMoveEvent.screenY = 9000;
+      window.dispatchEvent(mouseMoveEvent);
+      process.nextTick(function afterMousemove () {
         var rotation;
         cameraEl.components['look-controls'].updateOrientation();
         rotation = cameraEl.getAttribute('rotation');
@@ -279,14 +337,14 @@ suite('rotation controls on camera with mouse drag (integration unit test)', fun
     var self = this;
     this.cameraEl.setAttribute('rotation', '45 45 0');
     var mousedownEvent = new Event('mousedown');
+    mousedownEvent.screenX = 1000;
+    mousedownEvent.screenY = 1000;
     mousedownEvent.button = 0;
     el.sceneEl.canvas.dispatchEvent(mousedownEvent);
     process.nextTick(function afterMousedown () {
       var mouseMoveEvent = new Event('mousemove');
-      mouseMoveEvent.movementX = -1000;
-      mouseMoveEvent.movementY = -1000;
-      mouseMoveEvent.screenX = 1000;
-      mouseMoveEvent.screenY = 1000;
+      mouseMoveEvent.screenX = 0;
+      mouseMoveEvent.screenY = 0;
       window.dispatchEvent(mouseMoveEvent);
       process.nextTick(function afterMousemove () {
         var cameraEl = self.cameraEl;
@@ -330,10 +388,10 @@ suite('rotation controls on camera with touch drag (integration unit test)', fun
   setup(function (done) {
     var el = this.el = helpers.entityFactory();
     var self = this;
-    el.addEventListener('loaded', function () {
-      el.sceneEl.addEventListener('camera-ready', function () {
-        var cameraEl = self.cameraEl = el.sceneEl.querySelector('[camera]');  // Default camera.
-        cameraEl.addEventListener('loaded', function () { done(); });
+    setTimeout(() => {
+      el.sceneEl.addEventListener('loaded', () => {
+        self.cameraEl = el.sceneEl.camera.el;
+        done();
       });
     });
   });
@@ -407,7 +465,7 @@ suite('position controls on camera with VRControls (integration unit test)', fun
     var self = this;
     this.position = [0, 0, 0];
     this.orientation = [0, 0, 0];
-    sceneEl.addEventListener('camera-ready', function () {
+    sceneEl.addEventListener('cameraready', function () {
       var cameraEl = self.cameraEl = sceneEl.querySelector('[camera]');
       sceneEl.renderer.vr.getCamera = function (obj) {
         if (!this.enabled) { return; }
@@ -433,7 +491,6 @@ suite('position controls on camera with VRControls (integration unit test)', fun
 
     sceneEl.addState('vr-mode');
     cameraEl.components['look-controls'].hasPositionalTracking = true;
-    cameraEl.components['look-controls'].removeHeightOffset();
     this.position = [-1, 2, 3];
     el.sceneEl.render();
     var position = cameraEl.getAttribute('position');

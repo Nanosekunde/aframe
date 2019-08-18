@@ -102,7 +102,7 @@ The implementation is based on [mattdesl's three-bmfont-text][three-bmfont-text]
 ## Events
 
 | Event Name  | Description                                  |
-|--- --- --- -|--- --- --- --- --- --- --- --- --- --- --- --|
+|-------------|----------------------------------------------|
 | textfontset | Emitted when the font source has been loaded |
 
 ## Fonts
@@ -156,16 +156,38 @@ bitmap font packing tool. [See this guide for generating SDF fonts][sdffonts].
 
 [msdfgen]: https://github.com/Chlumsky/msdfgen
 [msdf-bmfont]: https://github.com/Jam3/msdf-bmfont
+[msdf-bmfont-web]: http://msdf-bmfont.donmccurdy.com/
 
-We can also generate MSDF fonts using [msdfgen] or [msdf-bmfont], although
-these tools may be less mature. msdf-bmfont provides a friendlier wrapper
-around that tool to generate MSDF font files from scalable TTF fonts
+We can also generate MSDF fonts using [a web-based MSDF tool][msdf-bmfont-web], or on the commandline with [msdfgen] or [msdf-bmfont]. Tools for MSDF fonts may be less mature than the SDF alternatives.
 
 Below is an example comparing a font generated with Hiero, Arial Black, with
 the SDF font, DejaVu:
 
 [fontexampleimage]: http://i.imgur.com/iWtXHm5.png
 ![Arial Black vs. Deja Vu][fontexampleimage]
+
+### Non-ASCII Characters
+
+To use non-ascii characters, you need to create your own custom font. The easiest way is to use [a web-based MSDF tool][msdf-bmfont-web]. Select your required character set and generate your own custom msdf font zip file.
+
+Once you download your custom msdf font zip file, extract it and rename `*.png` to `*-msdf.png`, then put both png and json files to your A-Frame directory.
+
+Lastly, you should specify the character set used in your HTML by using `<meta>` tag to avoid text to be garbled. If your text is garbled, it is not rendered.
+
+```html
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <script src="https://aframe.io/releases/0.9.2/aframe.min.js"></script>
+  </head>
+  <body>
+    <a-scene>
+      <a-sky color="lightblue"></a-sky>
+      <a-text value="ABCあいうえお日本語" font="custom-msdf.json" negate="false" scale="2 2 1" position="-2 2 -4"></a-text>
+    </a-scene>
+  </body>
+</html>
+```
 
 ## Sizing
 

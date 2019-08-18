@@ -82,3 +82,13 @@ el.object3D.position.sub(someOtherVector);
 To reflect updates done at the three.js level, A-Frame returns the actual
 `Object3D.position` vector object when doing `.getAttribute('position')`.  Note
 modifying the return value will modify the entity itself.
+
+See also [reading position and rotation of the camera](./camera.md#reading-position-or-rotation-of-the-camera).
+
+### Order of Transformations
+
+Transformations are applied to entities in this order:
+
+* [scale](scale.md)
+* [rotation](rotation.md)
+* position/translation

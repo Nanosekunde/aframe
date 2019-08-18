@@ -184,6 +184,28 @@ for (var i = 0; i < els.length; i++) {
 }
 ```
 
+#### A Note About Performance
+
+Avoid using `.querySelector` and `.querySelectorAll` in `tick` and `tock` functions
+that get called every frame as it does take some time to loop over the DOM to retrieve
+entities. Instead, keep a cached list of entities, calling the query selectors beforehand,
+and then just loop over that.
+
+```js
+AFRAME.registerComponent('query-selector-example', {
+  init: function () {
+    this.entities = document.querySelectorAll('.box');
+  },
+  
+  tick: function () {
+    // Don't call query selector in here, query beforehand.
+    for (let i = 0; i < this.entities.length; i++) {
+      // Do something with entities.
+    }
+  }
+});
+```
+
 ## Retrieving Component Data with `.getAttribute()`
 
 We can get the data of components of an entity via `.getAttribute`. A-Frame
@@ -211,7 +233,7 @@ actual entity data.
 
 This is because A-Frame allows us to [modify position, rotation, scale,
 visible][updatepos] at the three.js level, and in order for `.getAttribute` to
-return the correct data, A-Frame returns the acutal three.js Object3D objects.
+return the correct data, A-Frame returns the actual three.js Object3D objects.
 
 This is not true for the `.getAttribute('rotation')` because A-Frame, for
 better or worse, uses degrees instead of radians. In such case, a normal

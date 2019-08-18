@@ -3,13 +3,13 @@ title: FAQ
 type: introduction
 layout: docs
 parent_section: introduction
-order: 12
+order: 14
 ---
 
 [ecs]: ./entity-component-system.md
 [github]: http://github.com/aframevr/aframe/
 [three]: http://threejs.org
-[slack]: https://aframevr-slack.herokuapp.com/
+[slack]: https://aframe.io/slack-invite/
 [twitter]: https://twitter.com/aframevr/
 [stackoverflow]: http://stackoverflow.com/questions/tagged/aframe/
 
@@ -143,15 +143,6 @@ glTF is feature-rich, compact, and efficient. glTF focuses on providing a
 with web technologies.  [Read more about glTF and A-Frame's glTF
 component][whygltf].
 
-[collada]: https://en.wikipedia.org/wiki/COLLADA
-
-[COLLADA (`.dae`)][collada] is an XML-based format with a rich feature set.
-COLLADA is more common in comparison to glTF since it is older, but more suited
-to native applications that package all their contents together. COLLADA is not
-recommended since they're like the `.PSD` files of 3D models whereas glTF are
-like the `.JPG` of 3D models. They're heavy because they contain complete
-subscenes.
-
 [obj]: https://en.wikipedia.org/wiki/Wavefront_.obj_file
 
 [Wavefront (`.obj`)][obj] is also a well-known format but has some limitations
@@ -196,6 +187,10 @@ For sounds, check out:
 
 - [Freesound.org](http://www.freesound.org/)
 - [Annual GDC Game Audio Bundles by Sonniss](http://www.sonniss.com/gameaudiogdc2016/)
+
+## Can I render Vimeo videos as a texture?
+
+Yes. [Vimeo has an A-Frame plugin](https://github.com/vimeo/vimeo-webvr-demo), but rendering is limited to just videos from your personal Vimeo account.
 
 ## Can I render YouTube videos as a texture?
 
@@ -288,7 +283,7 @@ including:
 
 [deviceplatform]: ./vr-headsets-and-webvr-browsers.md
 
-Most of them. Read *[VR Headsets and WebVE Browsers][deviceplatform]* for more
+Most of them. Read *[VR Headsets and WebVR Browsers][deviceplatform]* for more
 information.
 
 ## How can I improve performance?
@@ -316,3 +311,15 @@ The [roadmap is on GitHub][roadmap]!
 ## Do I call it "A-Frame" or "aframe" or "aframevr" or "aFrame"?
 
 A-Frame!
+
+## Why do my textures render black?
+
+[precision]: ../components/renderer.md#precision
+
+Phones with Adreno 300 series GPUs are notoriously problematic. Set [renderer precision][precision] to `medium` as a workaround. Real fix has to happen at the driver / device level.
+
+## Why is the gyroscope not working on iOS?
+
+iOS 12.2 Safari applies new restrictions to the devicemotion API. Pages have to be served over `https` and the user has to enable the API manually on `Settings -> Safari -> Motion & Orientation access`. iOS 12.3 is introducing a `DeviceOrientationEvent.requestPermission` method that A-Frame will call to ask for user permission without manual steps.
+
+

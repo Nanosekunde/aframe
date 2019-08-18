@@ -15,6 +15,7 @@ suite('daydream-controls', function () {
         buttons: [{value: 0, pressed: false, touched: false}],
         pose: {orientation: [1, 0, 0, 0], position: null}
       }];
+      el.parentEl.renderer.vr.getStandingMatrix = function () {};
       done();
     });
   });
@@ -26,7 +27,7 @@ suite('daydream-controls', function () {
       var addEventListenersSpy = this.sinon.spy(component, 'addEventListeners');
       var injectTrackedControlsSpy = this.sinon.spy(component, 'injectTrackedControls');
 
-      el.sceneEl.systems['tracked-controls'].controllers = [];
+      el.sceneEl.systems['tracked-controls-webvr'].controllers = [];
 
       component.controllerPresent = false;
 
@@ -44,7 +45,7 @@ suite('daydream-controls', function () {
       var injectTrackedControlsSpy = this.sinon.spy(component, 'injectTrackedControls');
       var removeEventListenersSpy = this.sinon.spy(component, 'removeEventListeners');
 
-      el.sceneEl.systems['tracked-controls'].controllers = [];
+      el.sceneEl.systems['tracked-controls-webvr'].controllers = [];
 
       component.controllerPresent = false;
 
@@ -63,7 +64,7 @@ suite('daydream-controls', function () {
       var injectTrackedControlsSpy = this.sinon.spy(component, 'injectTrackedControls');
       var removeEventListenersSpy = this.sinon.spy(component, 'removeEventListeners');
 
-      el.sceneEl.systems['tracked-controls'].controllers = component.controllersWhenPresent;
+      el.sceneEl.systems['tracked-controls-webvr'].controllers = component.controllersWhenPresent;
 
       component.controllerPresent = false;
 
@@ -82,7 +83,7 @@ suite('daydream-controls', function () {
       var injectTrackedControlsSpy = this.sinon.spy(component, 'injectTrackedControls');
       var removeEventListenersSpy = this.sinon.spy(component, 'removeEventListeners');
 
-      el.sceneEl.systems['tracked-controls'].controllers = component.controllersWhenPresent;
+      el.sceneEl.systems['tracked-controls-webvr'].controllers = component.controllersWhenPresent;
 
       component.controllerEventsActive = true;
       component.controllerPresent = true;
@@ -102,7 +103,7 @@ suite('daydream-controls', function () {
       var injectTrackedControlsSpy = this.sinon.spy(component, 'injectTrackedControls');
       var removeEventListenersSpy = this.sinon.spy(component, 'removeEventListeners');
 
-      el.sceneEl.systems['tracked-controls'].controllers = [];
+      el.sceneEl.systems['tracked-controls-webvr'].controllers = [];
 
       component.controllerPresent = true;
       component.controllerEventsActive = true;
@@ -121,66 +122,106 @@ suite('daydream-controls', function () {
       var el = this.el;
       var component = el.components['daydream-controls'];
 
-      el.sceneEl.systems['tracked-controls'].controllers = component.controllersWhenPresent;
+      el.sceneEl.systems['tracked-controls-webvr'].controllers = component.controllersWhenPresent;
       component.checkIfControllerPresent();
 
       // Install event handler listening for thumbstickmoved.
-      this.el.addEventListener('trackpadmoved', function (evt) {
+      el.addEventListener('trackpadmoved', function (evt) {
         assert.equal(evt.detail.x, 0.1);
         assert.equal(evt.detail.y, 0.2);
-        assert.ok(evt.detail);
         done();
       });
 
       // Emit axismove.
-      this.el.emit('axismove', {axis: [0.1, 0.2], changed: [true, false]});
+      el.emit('axismove', {axis: [0.1, 0.2], changed: [true, false]});
     });
 
-    test(' does not emit trackpadmove on axismove with no changes', function (done) {
+    test('does not emit trackpadmove on axismove with no changes', function (done) {
       var el = this.el;
       var component = el.components['daydream-controls'];
 
-      el.sceneEl.systems['tracked-controls'].controllers = component.controllersWhenPresent;
+      el.sceneEl.systems['tracked-controls-webvr'].controllers = component.controllersWhenPresent;
 
       component.checkIfControllerPresent();
 
       // Purposely fail.
-      this.el.addEventListener('trackpadmoved', function (evt) {
-        assert.ok(false);
+      el.addEventListener('trackpadmoved', function (evt) {
+        assert.fail('trackpadmoved should not fire if axes have not changed.');
       });
 
       // Emit axismove.
-      this.el.emit('axismove', {axis: [0.1, 0.2], changed: [false, false]});
+      el.emit('axismove', {axis: [0.1, 0.2], changed: [false, false]});
 
       setTimeout(() => { done(); });
     });
   });
 
   suite('buttonchanged', function () {
-    test('emits trackpadchanged on buttonchanged', function (done) {
+    test('emits trackpadchanged on buttonchanged for button 0', function (done) {
       var el = this.el;
       var component = el.components['daydream-controls'];
 
-      el.sceneEl.systems['tracked-controls'].controllers = component.controllersWhenPresent;
+      el.sceneEl.systems['tracked-controls-webvr'].controllers = component.controllersWhenPresent;
 
       component.checkIfControllerPresent();
 
+      const eventState = {value: 0.5, pressed: true, touched: true};
+
       // Install event handler listening for triggerchanged.
-      this.el.addEventListener('trackpadchanged', function (evt) {
-        assert.ok(evt.detail);
+      el.addEventListener('trackpadchanged', function (evt) {
+        assert.deepEqual(evt.detail, eventState);
         done();
       });
 
-      // Emit buttonchanged.
-      this.el.emit('buttonchanged',
-                   {id: 0, state: {value: 0.5, pressed: true, touched: true}});
+      // Emit buttonchanged for the trackpad button.
+      el.emit('buttonchanged', {id: 0, state: eventState});
+    });
+
+    test('emits menuchanged on buttonchanged for button 1', function (done) {
+      var el = this.el;
+      var component = el.components['daydream-controls'];
+
+      el.sceneEl.systems['tracked-controls-webvr'].controllers = component.controllersWhenPresent;
+
+      component.checkIfControllerPresent();
+
+      const eventState = {value: 0.5, pressed: true, touched: true};
+
+      // Install event handler listening for triggerchanged.
+      el.addEventListener('menuchanged', function (evt) {
+        assert.deepEqual(evt.detail, eventState);
+        done();
+      });
+
+      // Emit buttonchanged for the menu button.
+      el.emit('buttonchanged', {id: 1, state: eventState});
+    });
+
+    test('emits systemanged on buttonchanged for button 2', function (done) {
+      var el = this.el;
+      var component = el.components['daydream-controls'];
+
+      el.sceneEl.systems['tracked-controls-webvr'].controllers = component.controllersWhenPresent;
+
+      component.checkIfControllerPresent();
+
+      const eventState = {value: 0.5, pressed: true, touched: true};
+
+      // Install event handler listening for triggerchanged.
+      el.addEventListener('systemchanged', function (evt) {
+        assert.deepEqual(evt.detail, eventState);
+        done();
+      });
+
+      // Emit buttonchanged for the system button.
+      el.emit('buttonchanged', {id: 2, state: eventState});
     });
   });
 
   suite('armModel', function () {
     function makePresent (el) {
       var component = el.components['daydream-controls'];
-      el.sceneEl.systems['tracked-controls'].controllers = component.controllersWhenPresent;
+      el.sceneEl.systems['tracked-controls-webvr'].controllers = component.controllersWhenPresent;
       component.checkIfControllerPresent();
     }
 
@@ -188,7 +229,7 @@ suite('daydream-controls', function () {
       var el = this.el;
       el.setAttribute('daydream-controls', 'armModel', false);
       makePresent(el);
-      var trackedControls = el.components['tracked-controls'];
+      var trackedControls = el.components['tracked-controls-webvr'];
       var applyArmModelSpy = this.sinon.spy(trackedControls, 'applyArmModel');
       trackedControls.tick();
       assert.notOk(applyArmModelSpy.called);
@@ -198,7 +239,7 @@ suite('daydream-controls', function () {
       var el = this.el;
       el.setAttribute('daydream-controls', 'armModel', true);
       makePresent(el);
-      var trackedControls = el.components['tracked-controls'];
+      var trackedControls = el.components['tracked-controls-webvr'];
       var applyArmModelSpy = this.sinon.spy(trackedControls, 'applyArmModel');
       trackedControls.tick();
       assert.ok(applyArmModelSpy.called);

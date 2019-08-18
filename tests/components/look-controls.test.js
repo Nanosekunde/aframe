@@ -1,23 +1,13 @@
  /* global Event, assert, process, setup, suite, test */
 
 var CANVAS_GRAB_CLASS = 'a-grab-cursor';
-var GRABBING_CLASS = 'a-grabbing';
 
 suite('look-controls', function () {
   setup(function (done) {
     var el = this.sceneEl = document.createElement('a-scene');
     document.body.appendChild(el);
-    el.addEventListener('loaded', function () {
+    el.addEventListener('cameraready', function () {
       done();
-    });
-  });
-
-  suite('update', function () {
-    test('can update userHeight', function () {
-      var cameraEl = this.sceneEl.camera.el;
-      assert.shallowDeepEqual(cameraEl.getAttribute('position'), {x: 0, y: 1.6, z: 0});
-      cameraEl.setAttribute('look-controls', 'userHeight', 2.5);
-      assert.shallowDeepEqual(cameraEl.getAttribute('position'), {x: 0, y: 2.5, z: 0});
     });
   });
 
@@ -40,25 +30,64 @@ suite('look-controls', function () {
       this.sceneEl.canvas.classList.contains(CANVAS_GRAB_CLASS);
     });
 
-    test('adds grabbing class to document body on mousedown', function (done) {
-      var el = this.sceneEl;
+    test('adds grabbing style to scene canvas on mousedown', function (done) {
+      var canvasEl = this.sceneEl.canvas;
       process.nextTick(function () {
-        assert.ok(document.body.classList.contains(GRABBING_CLASS));
-        document.body.classList.remove(GRABBING_CLASS);
+        assert.ok(canvasEl.style.cursor === 'grabbing');
+        canvasEl.style.cursor = '';
         done();
       });
       var event = new Event('mousedown');
       event.button = 0;
-      el.canvas.dispatchEvent(event);
+      canvasEl.dispatchEvent(event);
     });
 
-    test('removes grabbing class from document body on document body mouseup', function (done) {
-      document.body.classList.add(GRABBING_CLASS);
+    test('removes grabbing style from scene el canvas on document body mouseup', function (done) {
+      var canvasEl = this.sceneEl.canvas;
+      canvasEl.style.cursor = 'grabbing';
       process.nextTick(function () {
-        assert.notOk(document.body.classList.contains(GRABBING_CLASS));
+        assert.notOk(canvasEl.style.cursor === 'grabbing');
         done();
       });
       window.dispatchEvent(new Event('mouseup'));
+    });
+
+    test('requests pointer lock on mousedown', function (done) {
+      var cameraEl = this.sceneEl.camera.el;
+      var canvasEl = this.sceneEl.canvas;
+
+      var requestPointerLock = this.sinon.spy(canvasEl, 'requestPointerLock');
+      cameraEl.setAttribute('look-controls', {pointerLockEnabled: true});
+
+      process.nextTick(function () {
+        assert.ok(requestPointerLock.called);
+        canvasEl.style.cursor = '';
+        done();
+      });
+
+      var event = new Event('mousedown');
+      event.button = 0;
+      canvasEl.dispatchEvent(event);
+    });
+
+    test('does not request pointer lock when option is disabled', function (done) {
+      var sceneEl = this.sceneEl;
+      var canvasEl = sceneEl.canvas;
+      var cameraEl = sceneEl.camera.el;
+
+      var requestPointerLock = this.sinon.spy(canvasEl, 'requestPointerLock');
+
+      cameraEl.setAttribute('look-controls', {pointerLockEnabled: false});
+
+      process.nextTick(function () {
+        assert.notOk(requestPointerLock.called);
+        canvasEl.style.cursor = '';
+        done();
+      });
+
+      var event = new Event('mousedown');
+      event.button = 0;
+      canvasEl.dispatchEvent(event);
     });
   });
 
@@ -74,42 +103,6 @@ suite('look-controls', function () {
       assert.shallowDeepEqual(lookControlsComponent.savedPose.position,
                               {x: 3.0, y: 3.0, z: 3.0});
     });
-
-    test('does not save camera pose when entering VR w/o positional tracking', function () {
-      var sceneEl = this.sceneEl;
-      var cameraEl = sceneEl.camera.el;
-      var lookControlsComponent = cameraEl.components['look-controls'];
-      lookControlsComponent.hasPositionalTracking = false;
-      sceneEl.emit('enter-vr');
-      assert.notOk(lookControlsComponent.savedPose);
-    });
-  });
-
-  suite('addHeightOffset', function () {
-    test('adds userHeight offset', function () {
-      var cameraEl = this.sceneEl.camera.el;
-      assert.shallowDeepEqual(cameraEl.getAttribute('position'), {x: 0, y: 1.6, z: 0});
-    });
-  });
-
-  suite('removeCameraPose (enter VR)', function () {
-    test('removes the default offset w/ positional tracking', function () {
-      var sceneEl = this.sceneEl;
-      var cameraEl = sceneEl.camera.el;
-      cameraEl.components['look-controls'].hasPositionalTracking = true;
-      assert.shallowDeepEqual(cameraEl.getAttribute('position'), {x: 0, y: 1.6, z: 0});
-      sceneEl.emit('enter-vr');
-      assert.shallowDeepEqual(cameraEl.getAttribute('position'), {x: 0, y: 0, z: 0});
-    });
-
-    test('does not remove the default offset w/o positional tracking', function () {
-      var sceneEl = this.sceneEl;
-      var cameraEl = sceneEl.camera.el;
-      cameraEl.components['look-controls'].hasPositionalTracking = false;
-      assert.shallowDeepEqual(cameraEl.getAttribute('position'), {x: 0, y: 1.6, z: 0});
-      sceneEl.emit('enter-vr');
-      assert.shallowDeepEqual(cameraEl.getAttribute('position'), {x: 0, y: 1.6, z: 0});
-    });
   });
 
   suite('restoreCameraPose (exit VR)', function () {
@@ -121,16 +114,6 @@ suite('look-controls', function () {
       sceneEl.emit('enter-vr');
       cameraEl.setAttribute('position', {x: 9, y: 9, z: 9});
       assert.shallowDeepEqual(cameraEl.getAttribute('position'), {x: 9, y: 9, z: 9});
-      sceneEl.emit('exit-vr');
-      assert.shallowDeepEqual(cameraEl.getAttribute('position'), {x: 6, y: 6, z: 6});
-    });
-
-    test('does not restore camera pose without headset', function () {
-      var sceneEl = this.sceneEl;
-      var cameraEl = sceneEl.camera.el;
-      cameraEl.components['look-controls'].hasPositionalTracking = false;
-      sceneEl.emit('enter-vr');
-      cameraEl.setAttribute('position', {x: 6, y: 6, z: 6});
       sceneEl.emit('exit-vr');
       assert.shallowDeepEqual(cameraEl.getAttribute('position'), {x: 6, y: 6, z: 6});
     });

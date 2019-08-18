@@ -1,8 +1,12 @@
 /* global THREE */
-var bind = require('../utils/bind');
 var registerComponent = require('../core/component').registerComponent;
+var bind = require('../utils/bind');
+
 var trackedControlsUtils = require('../utils/tracked-controls');
+var checkControllerPresentAndSetup = trackedControlsUtils.checkControllerPresentAndSetup;
+var emitIfAxesChanged = trackedControlsUtils.emitIfAxesChanged;
 var onButtonEvent = trackedControlsUtils.onButtonEvent;
+
 var utils = require('../utils/');
 
 var debug = utils.debug('components:windows-motion-controls:debug');
@@ -73,10 +77,10 @@ module.exports.Component = registerComponent('windows-motion-controls', {
     var self = this;
     var el = this.el;
     this.onButtonChanged = bind(this.onButtonChanged, this);
-    this.onButtonDown = function (evt) { onButtonEvent(evt, 'down', self); };
-    this.onButtonUp = function (evt) { onButtonEvent(evt, 'up', self); };
-    this.onButtonTouchStart = function (evt) { onButtonEvent(evt, 'touchstart', self); };
-    this.onButtonTouchEnd = function (evt) { onButtonEvent(evt, 'touchend', self); };
+    this.onButtonDown = function (evt) { onButtonEvent(evt.detail.id, 'down', self); };
+    this.onButtonUp = function (evt) { onButtonEvent(evt.detail.id, 'up', self); };
+    this.onButtonTouchStart = function (evt) { onButtonEvent(evt.detail.id, 'touchstart', self); };
+    this.onButtonTouchEnd = function (evt) { onButtonEvent(evt.detail.id, 'touchend', self); };
     this.onControllerConnected = function () { self.setModelVisibility(true); };
     this.onControllerDisconnected = function () { self.setModelVisibility(false); };
     this.controllerPresent = false;
@@ -96,10 +100,6 @@ module.exports.Component = registerComponent('windows-motion-controls', {
       direction: new THREE.Vector3(0, 0, -1),
       createdFromMesh: false
     };
-
-    // Stored on object to allow for mocking in tests
-    this.emitIfAxesChanged = trackedControlsUtils.emitIfAxesChanged;
-    this.checkControllerPresentAndSetup = trackedControlsUtils.checkControllerPresentAndSetup;
 
     el.addEventListener('controllerconnected', this.onControllerConnected);
     el.addEventListener('controllerdisconnected', this.onControllerDisconnected);
@@ -132,7 +132,7 @@ module.exports.Component = registerComponent('windows-motion-controls', {
   },
 
   checkIfControllerPresent: function () {
-    this.checkControllerPresentAndSetup(this, GAMEPAD_ID_PREFIX, {
+    checkControllerPresentAndSetup(this, GAMEPAD_ID_PREFIX, {
       hand: this.data.hand,
       index: this.data.pair
     });
@@ -434,7 +434,7 @@ module.exports.Component = registerComponent('windows-motion-controls', {
       }
     }
 
-    this.emitIfAxesChanged(this, this.mapping.axes, evt);
+    emitIfAxesChanged(this, this.mapping.axes, evt);
   },
 
   setModelVisibility: function (visible) {
